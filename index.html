@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Practice Streak Tracker</title>
+    <style>
+        :root {
+            --color-1: #e41a1c;
+            --color-2: #377eb8;
+            --color-3: #4daf4a;
+            --color-4: #984ea3;
+            --color-5: #ff7f00;
+            --color-muted: #e5e7eb;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            line-height: 1.5;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .calendar-container {
+            border: 1px solid var(--color-muted);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .month-label {
+            position: absolute;
+            font-size: 0.75rem;
+            color: #6b7280;
+            top: -1.25rem;
+            font-weight: 500;
+        }
+
+        .day {
+            aspect-ratio: 1;
+            border: 1px solid var(--color-muted);
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            color: #9ca3af;
+            transition: all 0.2s;
+        }
+
+        .day.active {
+            border-color: #4b5563;
+            color: #111827;
+        }
+
+        .day.today {
+            border-width: 2px;
+            border-color: #4b5563;
+            font-weight: bold;
+        }
+
+        .day-number {
+            font-size: 0.875rem;
+        }
+
+        .practice-dots {
+            display: flex;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+            margin-top: auto;
+        }
+
+        .practice-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+        }
+
+        .controls {
+            margin: 2rem 0;
+        }
+
+        .practice-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .practice-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+            border: 1px solid currentColor;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .practice-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .practice-button:hover:not(:disabled) {
+            opacity: 0.8;
+        }
+
+        .practice-indicator {
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 50%;
+        }
+
+        .new-practice-form {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        input {
+            flex: 1;
+            max-width: 300px;
+            padding: 0.75rem;
+            border: 1px solid var(--color-muted);
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .add-button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .add-button:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .add-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            color: var(--color-2);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--color-muted);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            font-size: 1.25rem;
+        }
+
+        .color-1 { color: var(--color-1); background-color: var(--color-1); }
+        .color-2 { color: var(--color-2); background-color: var(--color-2); }
+        .color-3 { color: var(--color-3); background-color: var(--color-3); }
+        .color-4 { color: var(--color-4); background-color: var(--color-4); }
+        .color-5 { color: var(--color-5); background-color: var(--color-5); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Practice Streak Tracker</h1>
+    </div>
+
+    <div class="calendar-container">
+        <div id="calendar" class="calendar"></div>
+    </div>
+
+    <div class="controls">
+        <div id="practiceControls" class="practice-controls"></div>
+
+        <div class="new-practice-form">
+            <input type="text" id="newPracticeName" placeholder="Enter new practice name" maxlength="30">
+            <button id="addPracticeButton" class="add-button">Add New Practice</button>
+        </div>
+        <div id="errorMessage" class="error-message"></div>
+    </div>
+
+    <div id="stats" class="stats"></div>
+
+    <script>
+        class MultiPracticeTracker {
+            constructor() {
+                this.dbName = 'practiceStreakDB';
+                this.dbVersion = 1;
+                this.maxPractices = 5;
+                this.colors = ['color-1', 'color-2', 'color-3', 'color-4', 'color-5'];
+                this.data = { practices: {} };
+
+                this.initializeUI();
+                this.initializeDB().then(() => {
+                    this.loadData().then(() => {
+                        this.render();
+                    });
+                });
+            }
+
+            async initializeDB() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.dbName, this.dbVersion);
+
+                    request.onerror = (event) => {
+                        console.error('Database error:', event.target.error);
+                        reject(event.target.error);
+                    };
+
+                    request.onsuccess = (event) => {
+                        this.db = event.target.result;
+                        resolve();
+                    };
+
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+
+                        // Create the practices object store
+                        if (!db.objectStoreNames.contains('practices')) {
+                            const practicesStore = db.createObjectStore('practices', { keyPath: 'name' });
+                            practicesStore.createIndex('colorIndex', 'colorIndex', { unique: false });
+                        }
+                    };
+                });
+            }
+
+            async loadData() {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['practices'], 'readonly');
+                    const store = transaction.objectStore('practices');
+                    const request = store.getAll();
+
+                    request.onsuccess = () => {
+                        this.data.practices = {};
+                        request.result.forEach(practice => {
+                            this.data.practices[practice.name] = {
+                                days: practice.days || {},
+                                longestStreak: practice.longestStreak || 0,
+                                currentStreak: practice.currentStreak || 0,
+                                colorIndex: practice.colorIndex
+                            };
+                        });
+                        resolve();
+                    };
+
+                    request.onerror = () => {
+                        reject(request.error);
+                    };
+                });
+            }
+
+            async saveData() {
+                const transaction = this.db.transaction(['practices'], 'readwrite');
+                const store = transaction.objectStore('practices');
+
+                // Clear existing data
+                await store.clear();
+
+                // Add each practice
+                for (const [name, practice] of Object.entries(this.data.practices)) {
+                    await store.add({
+                        name,
+                        days: practice.days,
+                        longestStreak: practice.longestStreak,
+                        currentStreak: practice.currentStreak,
+                        colorIndex: practice.colorIndex
+                    });
+                }
+
+                return new Promise((resolve, reject) => {
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = () => reject(transaction.error);
+                });
+            }
+
+            initializeUI() {
+                this.calendarElement = document.getElementById('calendar');
+                this.practiceControlsElement = document.getElementById('practiceControls');
+                this.statsElement = document.getElementById('stats');
+                this.newPracticeInput = document.getElementById('newPracticeName');
+                this.addPracticeButton = document.getElementById('addPracticeButton');
+                this.errorMessage = document.getElementById('errorMessage');
+
+                this.addPracticeButton.addEventListener('click', () => this.addPractice());
+                this.newPracticeInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addPractice();
+                });
+            }
+
+            async addPractice() {
+                const name = this.newPracticeInput.value.trim();
+
+                if (!name) {
+                    this.showError('Please enter a practice name');
+                    return;
+                }
+
+                if (Object.keys(this.data.practices).length >= this.maxPractices) {
+                    this.showError(`Maximum ${this.maxPractices} practices allowed`);
+                    return;
+                }
+
+                if (this.data.practices[name]) {
+                    this.showError('This practice already exists');
+                    return;
+                }
+
+                this.data.practices[name] = {
+                    days: {},
+                    longestStreak: 0,
+                    currentStreak: 0,
+                    colorIndex: Object.keys(this.data.practices).length
+                };
+
+                try {
+                    await this.saveData();
+                    this.render();
+                    this.newPracticeInput.value = '';
+                    this.errorMessage.textContent = '';
+                } catch (error) {
+                    this.showError('Failed to save practice');
+                    console.error('Save error:', error);
+                }
+            }
+
+            showError(message) {
+                this.errorMessage.textContent = message;
+                setTimeout(() => {
+                    this.errorMessage.textContent = '';
+                }, 3000);
+            }
+
+            formatDate(date) {
+                return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            }
+
+            async logPractice(practiceName) {
+                const today = this.formatDate(new Date());
+                if (!this.data.practices[practiceName].days[today]) {
+                    this.data.practices[practiceName].days[today] = true;
+                    this.updateStreaks(practiceName);
+                    try {
+                        await this.saveData();
+                        this.render();
+                    } catch (error) {
+                        this.showError('Failed to save practice');
+                        console.error('Save error:', error);
+                    }
+                }
+            }
+
+            updateStreaks(practiceName) {
+                const practice = this.data.practices[practiceName];
+                let currentStreak = 0;
+                let longestStreak = practice.longestStreak;
+
+                const today = this.formatDate(new Date());
+                const yesterday = this.formatDate(new Date(Date.now() - 86400000));
+
+                if (practice.days[today]) {
+                    currentStreak = 1;
+                    let checkDate = yesterday;
+                    while (practice.days[checkDate]) {
+                        currentStreak++;
+                        checkDate = this.formatDate(new Date(new Date(checkDate).getTime() - 86400000));
+                    }
+                }
+
+                if (currentStreak > longestStreak) {
+                    longestStreak = currentStreak;
+                }
+
+                practice.currentStreak = currentStreak;
+                practice.longestStreak = longestStreak;
+            }
+
+            generateCalendarDays() {
+                const today = new Date();
+                today.setHours(23, 59, 59, 999);
+                const days = [];
+
+                for (let i = 27; i >= 0; i--) {
+                    const date = new Date(today.getTime() - (i * 86400000));
+                    const dateStr = this.formatDate(date);
+                    const practices = Object.entries(this.data.practices).filter(
+                        ([_, practice]) => practice.days[dateStr]
+                    );
+
+                    days.push({
+                        date: date,
+                        dateStr: dateStr,
+                        isToday: dateStr === this.formatDate(today),
+                        practices: practices
+                    });
+                }
+
+                return days;
+            }
+
+            renderCalendar() {
+                this.calendarElement.innerHTML = '';
+
+                const days = this.generateCalendarDays();
+                let currentMonth = '';
+
+                days.forEach(day => {
+                    const dayElement = document.createElement('div');
+                    dayElement.className = 'day';
+                    if (day.practices.length > 0) dayElement.classList.add('active');
+                    if (day.isToday) dayElement.classList.add('today');
+
+                    const date = day.date;
+                    const month = date.toLocaleString('default', { month: 'short' });
+
+                    const dayNumber = document.createElement('div');
+                    dayNumber.className = 'day-number';
+
+                    if (month !== currentMonth) {
+                        dayNumber.textContent = `${month} ${date.getDate()}`;
+                        currentMonth = month;
+                    } else {
+                        dayNumber.textContent = date.getDate();
+                    }
+
+                    dayElement.appendChild(dayNumber);
+
+                    const dotsContainer = document.createElement('div');
+                    dotsContainer.className = 'practice-dots';
+
+                    day.practices.forEach(([_, practice]) => {
+                        const dot = document.createElement('div');
+                        dot.className = `practice-dot ${this.colors[practice.colorIndex]}`;
+                        dotsContainer.appendChild(dot);
+                    });
+
+                    dayElement.appendChild(dotsContainer);
+                    this.calendarElement.appendChild(dayElement);
+                });
+            }
+
+            renderPracticeControls() {
+                this.practiceControlsElement.innerHTML = '';
+                const today = this.formatDate(new Date());
+
+                Object.entries(this.data.practices).forEach(([name, practice]) => {
+                    const button = document.createElement('button');
+                    button.className = 'practice-button';
+                    button.style.color = `var(--${this.colors[practice.colorIndex]})`;
+
+                    const indicator = document.createElement('div');
+                    indicator.className = `practice-indicator ${this.colors[practice.colorIndex]}`;
+
+                    const completed = practice.days[today];
+                    button.disabled = completed;
+                    button.onclick = () => this.logPractice(name);
+
+                    button.appendChild(indicator);
+                    button.appendChild(document.createTextNode(
+                        completed ? `${name} ✓` : name
+                    ));
+
+                    this.practiceControlsElement.appendChild(button);
+                });
+            }
+
+            renderStats() {
+                this.statsElement.innerHTML = '';
+
+                Object.entries(this.data.practices).forEach(([name, practice]) => {
+                    const statItem = document.createElement('div');
+                    statItem.className = 'stat-item';
+
+                    const indicator = document.createElement('div');
+                    indicator.className = `practice-indicator ${this.colors[practice.colorIndex]}`;
+
+                    statItem.appendChild(indicator);
+                    statItem.appendChild(document.createTextNode(
+                        `${name}: `
+                    ));
+
+                    const streak = document.createElement('span');
+                    streak.className = 'stat-value';
+                    streak.textContent = `${practice.currentStreak}`;
+
+                    statItem.appendChild(streak);
+                    statItem.appendChild(document.createTextNode(
+                        ` day${practice.currentStreak !== 1 ? 's' : ''}`
+                    ));
+
+                    this.statsElement.appendChild(statItem);
+                });
+            }
+
+            render() {
+                this.renderCalendar();
+                this.renderPracticeControls();
+                this.renderStats();
+                this.addPracticeButton.disabled = 
+                    Object.keys(this.data.practices).length >= this.maxPractices;
+            }
+        }
+
+        // Initialize the tracker when the page loads
+        window.addEventListener('load', () => {
+            window.tracker = new MultiPracticeTracker();
+        });
+    </script>
+</body>
+</html>
