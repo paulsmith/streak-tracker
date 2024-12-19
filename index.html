@@ -276,6 +276,11 @@
                                 colorIndex: practice.colorIndex
                             };
                         });
+
+                        for (const practiceName in this.data.practices) {
+                            this.updateStreaks(practiceName);
+                        }
+
                         resolve();
                     };
 
