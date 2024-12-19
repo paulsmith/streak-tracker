@@ -390,16 +390,15 @@
                 let currentStreak = 0;
                 let longestStreak = practice.longestStreak;
 
-                const today = this.formatDate(new Date());
-                const yesterday = this.formatDate(new Date(Date.now() - 86400000));
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
 
-                if (practice.days[today]) {
-                    currentStreak = 1;
-                    let checkDate = yesterday;
-                    while (practice.days[checkDate]) {
-                        currentStreak++;
-                        checkDate = this.formatDate(new Date(new Date(checkDate).getTime() - 86400000));
-                    }
+                let checkDate = today;
+                let dateStr = this.formatDate(checkDate);
+                while (practice.days[dateStr]) {
+                    currentStreak++;
+                    checkDate = new Date(checkDate.getTime() - 86400000);
+                    dateStr = this.formatDate(checkDate);
                 }
 
                 if (currentStreak > longestStreak) {
