@@ -225,13 +225,13 @@
                 this.maxPractices = 5;
                 this.colors = ['color-1', 'color-2', 'color-3', 'color-4', 'color-5'];
                 this.data = { practices: {} };
+            }
 
+            async init() {
                 this.initializeUI();
-                this.initializeDB().then(() => {
-                    this.loadData().then(() => {
-                        this.render();
-                    });
-                });
+                await this.initializeDB();
+                await this.loadData();
+                await this.render();
             }
 
             async initializeDB() {
@@ -541,8 +541,9 @@
         }
 
         // Initialize the tracker when the page loads
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             window.tracker = new MultiPracticeTracker();
+            await window.tracker.init();
         });
     </script>
 </body>
