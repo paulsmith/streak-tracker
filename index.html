@@ -63,12 +63,11 @@
         }
 
         .day.active {
-            border-color: #4b5563;
+            border-color: #4daf4a;
             color: #111827;
         }
 
         .day.today {
-            border-width: 2px;
             border-color: #4b5563;
             font-weight: bold;
         }
@@ -392,23 +391,18 @@
 
             updateStreaks(practiceName) {
                 const practice = this.data.practices[practiceName];
+                const today = new Date();
+                let yesterday = new Date(new Date(today).setDate(today.getDate() - 1));
                 let currentStreak = 0;
                 let longestStreak = practice.longestStreak;
 
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+                if (practice.days[this.formatDate(today)]) currentStreak++;
 
-                let checkDate = today;
-                let dateStr = this.formatDate(checkDate);
-                while (practice.days[dateStr]) {
-                    currentStreak++;
-                    checkDate = new Date(checkDate.getTime() - 86400000);
-                    dateStr = this.formatDate(checkDate);
-                }
+                for (let checkDate = yesterday;
+                     practice.days[this.formatDate(checkDate)];
+                     checkDate.setDate(checkDate.getDate() - 1)) currentStreak++;
 
-                if (currentStreak > longestStreak) {
-                    longestStreak = currentStreak;
-                }
+                if (currentStreak > longestStreak) longestStreak = currentStreak;
 
                 practice.currentStreak = currentStreak;
                 practice.longestStreak = longestStreak;
