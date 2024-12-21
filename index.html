@@ -5,13 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Practice Streak Tracker</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            color-scheme: light dark;
+            accent-color: var(--accent);
+            background: var(--bg);
+            color: var(--fg);
+
+            &[data-color-scheme="light"] {
+                color-scheme: light;
+            }
+
+            &[data-color-scheme="dark"] {
+                color-scheme: dark;
+            }
+        }
+
         :root {
-            --color-1: #e41a1c;
-            --color-2: #377eb8;
-            --color-3: #4daf4a;
-            --color-4: #984ea3;
-            --color-5: #ff7f00;
-            --color-muted: #e5e7eb;
+            --bg: light-dark(#f6f6f6, #222);
+            --fg: light-dark(#222, #eee);
+            --accent: light-dark(dodgerblue, cornflowerblue);
+
+            --color-1-light: #e41a1c;
+            --color-2-light: #377eb8;
+            --color-3-light: #4daf4a;
+            --color-4-light: #984ea3;
+            --color-5-light: #ff7f00;
+            --color-muted-light: #e5e7eb;
+            --green-light: green;
+            --cta-light: #2563eb;
+            --gray-light: #aaa;
+
+            --color-1-dark: #ff5757; /* Brightened for visibility */
+            --color-2-dark: #63a4ff; /* Lightened for contrast */
+            --color-3-dark: #6cdf6c; /* Lightened for vibrancy */
+            --color-4-dark: #d58bff; /* Lightened for better contrast */
+            --color-5-dark: #ff9e3c; /* Lightened for warmth */
+            --color-muted-dark: #4b5563; /* Muted dark tone for subtlety */
+            --green-dark: limegreen;
+            --cta-dark: #4583ff;
+            --gray-dark: #555;
+
+            --color-1: light-dark(var(--color-1-light), var(--color-1-dark));
+            --color-2: light-dark(var(--color-2-light), var(--color-2-dark));
+            --color-3: light-dark(var(--color-3-light), var(--color-3-dark));
+            --color-4: light-dark(var(--color-4-light), var(--color-4-dark));
+            --color-5: light-dark(var(--color-5-light), var(--color-5-dark));
+            --color-muted: light-dark(var(--color-muted-light), var(--color-muted-dark));
+            --green: light-dark(var(--green-light), var(--green-dark));
+            --cta: light-dark(var(--cta-light), var(--cta-dark));
+            --gray: light-dark(var(--gray-light), var(--gray-dark));
         }
 
         body {
@@ -58,17 +104,18 @@
             display: flex;
             flex-direction: column;
             gap: 0.25rem;
-            color: #9ca3af;
+            color: var(--gray);
             transition: all 0.2s;
         }
 
         .day.active {
-            border-color: #4daf4a;
-            color: #111827;
+            border-color: var(--green);
+            color: var(--fg);
         }
 
         .day.today {
-            border-color: #4b5563;
+            border-color: var(--fg);
+            border-width: 2px;
             font-weight: bold;
         }
 
@@ -104,7 +151,7 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            background: white;
+            background: var(--bg);
             border: 1px solid currentColor;
             padding: 0.5rem 1rem;
             border-radius: 0.25rem;
@@ -144,7 +191,7 @@
         }
 
         .add-button {
-            background-color: #2563eb;
+            background-color: var(--cta);
             color: white;
             border: none;
             padding: 0.75rem 1.5rem;
@@ -193,12 +240,50 @@
         .color-3 { color: var(--color-3); background-color: var(--color-3); }
         .color-4 { color: var(--color-4); background-color: var(--color-4); }
         .color-5 { color: var(--color-5); background-color: var(--color-5); }
+
+        theme-switcher {
+            display: block;
+            margin: 1em 0;
+            width: fit-content;
+            color: var(--gray);
+            & fieldset {
+                border: 1px solid var(--color-muted);
+                border-radius: 0.5rem;
+            }
+            & label {
+                &:has(:checked) {
+                    font-weight: bold;
+                }
+                display: inline-block;
+                padding: 0.25em 0.5em;
+                &:not(:last-child) {
+                    margin-right: 2em;
+                }
+            }
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Practice Streak Tracker</h1>
     </div>
+
+    <theme-switcher>
+        <form>
+            <fieldset>
+                <legend>Theme</legend>
+                <label>Light
+                    <input type=radio name=theme value=light>
+                </label>
+                <label>Dark
+                    <input type=radio name=theme value=dark>
+                </label>
+                <label>Auto
+                    <input type=radio name=theme value=auto checked>
+                </label>
+            </fieldset>
+        </form>
+    </theme-switcher>
 
     <div class="calendar-container">
         <div id="calendar" class="calendar"></div>
@@ -217,6 +302,21 @@
     <div id="stats" class="stats"></div>
 
     <script>
+        customElements.define(
+            'theme-switcher',
+            class extends HTMLElement {
+                connectedCallback() {
+                    this.oninput = ({ target }) => {
+                        if (!['light', 'dark'].includes(target.value)) {
+                            delete document.documentElement.dataset.colorScheme;
+                        } else {
+                            document.documentElement.dataset.colorScheme = target.value;
+                        }
+                    };
+                }
+            }
+        );
+
         class MultiPracticeTracker {
             constructor() {
                 this.dbName = 'practiceStreakDB';
